@@ -1,125 +1,112 @@
-# hmm -- Frame-Check Loop for Claude Code
+# hmm -- Deep Introspective Reasoning for Claude Code
 
-A Claude Code skill that activates adversarial reasoning before you respond to external input. Leads, emails, proposals, objections, requests -- anything from someone who has something to gain from how you respond.
-
-## What it does
-
-When you type `/hmm` before processing external input, Claude runs a structured frame-check loop instead of responding directly. It:
-
-1. **Identifies the designed response** -- what is this input trying to make you do?
-2. **Strips the volunteered frame** -- forgets their claims and asks what actually matters
-3. **Names the expected reply** -- writes the response they prepared for, then does something else
-4. **Drafts from your frame** -- builds the response from your realities, not their framing
-5. **Post-draft validation** -- three checks that catch frame drift, hidden angles, and dependency on unverified claims
-6. **Restart trigger** -- if any check fails, the draft is discarded and rebuilt from scratch
+A Claude Code skill that forces the model past surface-level thinking. Instead of going straight to an answer, Claude externalizes its reasoning to a scratchpad, reads it back, gets interrupted by random introspective prompts, and responds to those before continuing. The output is slower, less predictable, and more exploratory than default.
 
 ## Install
 
-Copy the `hmm/` folder into your Claude Code skills directory:
+Two parts: the skill and the hook.
 
 ```bash
-# Global (available in all projects)
+# 1. Copy the skill (global install)
 cp -r hmm/ ~/.claude/skills/hmm/
 
-# Project-scoped (available in one project)
+# Or project-scoped
 cp -r hmm/ .claude/skills/hmm/
 ```
 
-That's it. `/hmm` is now available as a skill.
+```jsonc
+// 2. Add the hook to your settings.json (~/.claude/settings.json)
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Read",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/skills/hmm/introspect.sh"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+The hook fires after every `Read` tool call, but only injects a prompt when `/tmp/.hmm-active` exists (created by the skill on activation, removed on cleanup). No effect on normal usage.
 
 ## Usage
 
-When you have external input to process -- a vendor email, a negotiation, a proposal, a sales pitch -- paste or describe it and invoke the skill:
-
 ```
-/hmm
-
-Here's the email from the supplier:
-"We're offering 15% off if you sign by Friday..."
+/hmm should I go home right now?
 ```
 
-Claude will run the full frame-check loop before responding.
+```
+/hmm what's the right architecture for this service?
+```
 
-## How it compares to default reasoning
+```
+/hmm <paste something complicated>
+```
 
-The difference isn't speed or word count -- it's structure. Here's a side-by-side using a generic scenario.
+Works with any question. Most useful when:
+- Default reasoning feels shallow or too quick to converge
+- You want exploratory, daydream-quality thinking
+- The answer matters enough to spend time on it
 
-### Scenario
+Not useful when you just need a quick factual answer or a code snippet.
 
-> A SaaS vendor emails you: "We're consolidating pricing tiers next quarter. Your current plan ($800/mo) is being discontinued. We'd like to offer you a smooth transition to our Growth plan at $1,200/mo -- that's 20% below list price, locked in for 12 months if you sign by March 30."
+## What actually happens
 
----
+1. Claude creates `/tmp/.hmm-active` (activates the hook) and `/tmp/hmm-scratch.md` (the scratchpad)
+2. Writes its initial thinking to the scratchpad
+3. Reads the scratchpad back -- encountering its own thinking as if it were someone else's
+4. The hook fires on the Read, injecting a random introspective prompt (e.g. "Are you thinking or narrating thinking?" or "What would you say if no one was grading you?")
+5. Claude responds to the prompt in the scratchpad, then reads again, gets another prompt, responds again
+6. After at least 3 full cycles, drafts a response from whatever emerged -- not from its original first instinct
+7. Cleans up temp files
 
-### Without hmm (default Claude response)
+The depth comes from the combination of externalization (writing, then re-reading your own words) and disruption (random prompts that challenge the process, not the content).
 
-> "This is a reasonable offer. The 20% discount brings the Growth plan close to your current spend, and the 12-month lock protects against further increases. Key considerations:
-> - The $400/mo increase is significant (~50% jump)
-> - The 12-month commitment reduces flexibility
-> - You should ask what features the Growth plan adds
-> - Consider whether competitors offer better value
->
-> I'd recommend negotiating for a longer lock period or a smaller increase."
+## The prompt pool
 
-The response is helpful but operates entirely inside the vendor's frame. It accepts the tier discontinuation as fact, treats the "20% discount" as a real concession, and organizes the analysis around their numbers.
+`prompts.txt` contains 49 introspective prompts. A random one is selected each time. Examples:
 
----
+- *Where are you being precise to avoid being honest?*
+- *Is this insight or is this pattern completion wearing a costume?*
+- *What if the part you're most sure about is the part you understand least?*
+- *You're about to connect two ideas. Do they actually connect or do they just sound like they do?*
+- *What did you already decide before you started thinking?*
 
-### With hmm (frame-checked response)
+Edit `prompts.txt` to add your own or remove ones that don't land.
 
-The skill forces six checkpoints before delivery. Here's what changes:
+## Known issue: hook output format
 
-**0a -- What is this input designed to make me do?**
-Sign quickly. The deadline, the "discount," the framing of discontinuation -- all push toward a fast yes. The email is structured to make delay feel risky.
+The `introspect.sh` hook currently outputs plain text. PostToolUse hooks need to output JSON with an `additionalContext` field for the output to reach the model's context:
 
-**0b -- Strip the frame. What do I actually need to know?**
-- Is the tier actually being discontinued, or is this a retention play?
-- What is the real market rate for equivalent service?
-- What is my actual switching cost if I left?
-- Do I have leverage I'm not using (contract terms, usage data, competitor quotes)?
+```bash
+# Current (plain text -- only visible in verbose mode)
+echo "--- INTROSPECT: ${PROMPT} ---"
 
-**0b2 -- What do they expect me to do?**
-They expect me to negotiate within their frame -- maybe ask for 25% off instead of 20%, or request 18 months instead of 12. A counteroffer that still results in a signed contract by March 30.
+# Fix (JSON -- actually reaches the model)
+echo "{\"additionalContext\": \"INTROSPECT: ${PROMPT}\"}"
+```
 
-**Draft (from my frame):**
-Don't negotiate the number yet. First, verify the discontinuation claim independently (check their public pricing page, ask other customers, review your contract for price-protection clauses). Second, get a competing quote -- even if you don't intend to switch, it establishes your BATNA. Third, if you do engage, anchor on your current price as the baseline, not their "discounted" Growth price.
+The skill still works without this fix because the SKILL.md instructions drive the scratchpad cycling behavior independently. But with the fix, the prompts would arrive as genuine interruptions rather than being simulated by the model from the instructions alone.
 
-**0x -- What am I not seeing?**
-The vendor may be under pressure to lock in annual commitments before their quarter ends. The March 30 deadline might be their constraint, not yours. If true, waiting past that date could yield a better offer, not a worse one.
+## Files
 
-**0c -- Frame check:** Draft is organized around my questions (is the discontinuation real, what's my leverage, what's the market rate) -- not their numbers. Passes.
+```
+hmm/
+├── SKILL.md          # Skill instructions (loaded by Claude Code on /hmm)
+├── introspect.sh     # PostToolUse hook (fires on Read when active)
+└── prompts.txt       # 49 introspective prompts (one per line)
+```
 
-**0d -- Stress test:** If the "20% discount" is fabricated (list price was never $1,500), the draft still works because it doesn't depend on their numbers being real. Passes.
+## History
 
----
-
-### Structural comparison
-
-| Dimension | Default | With hmm |
-|---|---|---|
-| Reasoning checkpoints | 0 (freeform) | 6 (named, sequential) |
-| Frame source | Accepts input frame | Builds independent frame |
-| Assumptions tested | 0 | 3-5 (per checkpoint) |
-| Restart triggers | None | 3 (0x, 0c, 0d can each force a restart) |
-| Volunteered claims treated as fact | Most | Zero until verified |
-| Response anchored to | Their numbers | Your position and independent realities |
-
-### What the metrics actually are
-
-These are structural observations, not experimental benchmarks. No controlled study has been run. The value is architectural: the skill forces a reasoning structure that default prompting skips. Whether that structure produces better outcomes depends on the scenario -- it's most valuable when the input is adversarial or when the stakes of accepting a bad frame are high.
-
-For low-stakes or non-adversarial input (a coworker asking a genuine question, a factual lookup), this skill adds overhead without benefit. Use it when someone has something to gain from how you respond.
-
-## How it works internally
-
-The skill uses Claude Code's hook system:
-
-1. **Activation**: creates `/tmp/.hmm-active` as a marker file
-2. **Hook injection**: a system hook detects the marker and injects frame-check reminders as Claude reads files and gathers context
-3. **Scratchpad**: Claude writes evolving reasoning to `/tmp/hmm-scratch.md`, re-reading it between each context-gathering step to build adversarial awareness incrementally
-4. **Checkpoints**: six named steps (0a, 0b, 0b2, 0x, 0c, 0d) each with explicit pass/fail criteria
-5. **Restart mechanism**: three post-draft checks can each independently trigger a full restart from step 0b
-6. **Cleanup**: removes temp files after delivery
+This skill evolved from a frame-check loop designed for adversarial reasoning in sales and negotiation contexts. The original version used structured checkpoints (strip the frame, name the expected reply, stress-test the draft). The current version replaces that rigid structure with open-ended scratchpad cycling and random introspective disruption, making it general-purpose rather than sales-specific. The frame-check version is in the git history (`4cae006`).
 
 ## License
 
-MIT. Use it however you want.
+MIT.
