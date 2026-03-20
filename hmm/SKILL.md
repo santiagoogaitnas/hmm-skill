@@ -1,60 +1,72 @@
 ---
 name: hmm
-description: Frame-check loop. Activates adversarial reasoning before responding to any external input -- leads, emails, proposals, objections, requests. Forces you to question the input's framing, strip volunteered claims, find the move you're not seeing, draft from your own frame, and reject-restart if you drifted into theirs. Use when processing anything from someone who has something to gain from how you respond.
+description: Deep introspective reasoning loop. Forces the model past surface-level thinking through mandatory scratchpad cycles and random introspective interruptions. Each time you read something -- including your own thinking -- a random prompt challenges the process itself, not the content. Use for any task where default reasoning feels shallow, predictable, or too quick to converge. Use when you want genuinely surprising, exploratory, daydream-quality thinking rather than the default predictable response.
 ---
 
-# Frame-Check Loop
+# Deep Introspective Loop
 
 Start your response with "hmm" on its own line. Nothing else before it.
 
 ## Activate
 
-Run this first, before anything else:
 ```bash
 touch /tmp/.hmm-active
 ```
 
-A system hook will now inject a frame-check reminder after every file you read. This is intentional. Engage with it each time -- do not ignore or skip the injected prompt.
+A system hook will now inject a random introspective prompt after every file you read -- including your own scratchpad. These prompts are unpredictable. They will feel unproductive. They will interrupt your flow. That is the point. Engage with each one honestly in the scratchpad before continuing. Do not dismiss, summarize, or rush past them.
 
 ## Scratchpad
 
-Create a scratchpad file at `/tmp/hmm-scratch.md`. As you read files and gather context, write your evolving thinking to the scratchpad after each read. Not notes -- reasoning. What you're learning, what contradicts your assumptions, what smells off. Read the scratchpad back before reading the next file. Each cycle should challenge or build on the previous one.
+Create a scratchpad at `/tmp/hmm-scratch.md`. This is not a notepad. It is a mirror. Every cycle follows this pattern:
 
-## Before you reason
+1. Write what you're actually thinking -- not what you think you should be thinking
+2. Read it back
+3. A random introspective prompt will appear after the read
+4. Respond to the prompt honestly in the scratchpad
+5. Read the scratchpad again
+6. Another prompt will appear
+7. Respond again
+8. Continue until you've completed at least 3 full write-read-respond cycles before moving to any conclusion
 
-After gathering context through the scratchpad cycle, run these steps. Show your work on each -- do not skip or abbreviate.
+The depth comes from encountering your own externalized thinking as if it were someone else's, then getting interrupted by a question you didn't choose. Let yourself drift. Follow the prompt wherever it takes you, even if it feels unrelated. Especially if it feels unrelated.
 
-**0a. What is this input designed to make me do?**
-Every piece of information someone volunteers is a choice. Before analyzing what they said, identify what response they're trying to produce. What are they steering you toward? What would a naive reading lead you to do? Name it explicitly.
+## The cycles
 
-**0b. If I throw out everything they volunteered, what do I actually need to know?**
-Strip their frame entirely. Forget their numbers, their claims, their framing. Based only on the situation (not their description of it), what questions matter? What realities exist independent of what they chose to tell you?
+There is no fixed sequence of steps. The introspective prompts are random and different each time. But each cycle must include:
 
-**0b2. What does this person think I'm going to do?**
-Write the expected response in one sentence -- the reply they've already mentally prepared for. Now do something else.
+- Writing to the scratchpad (what you think, what you notice, what shifted)
+- Reading the scratchpad back (encountering your own thinking)
+- Engaging with whatever introspective prompt appears (not performing engagement -- actually sitting with it)
+- Writing again (incorporating what the prompt surfaced)
 
-## Draft your response
+Do not skip cycles to get to the answer faster. The answer is not the point. The quality of attention you bring to the problem is the point. The answer emerges from that.
 
-Now do the task -- draft the reply, write the analysis, answer the question, whatever was asked. Use the reframed thinking from 0b and 0b2 as your starting point, not the original input's frame.
+Let yourself wander. Get lost. Follow tangents. The value is in the territory you wouldn't have explored if you'd stayed on the efficient path.
 
-## After you draft
+## Minimum depth
 
-**0x. What is the move I'm not seeing?**
-You've drafted a response. Before checking it, assume there's an angle you missed entirely. Not a tweak to what you wrote -- a fundamentally different read of the situation that would change your approach. Name it. If it's better than your draft, restart from 0b using that read instead.
+Before drafting any response:
 
-**0c. Whose frame is my draft operating in -- mine or theirs?**
-Look at what you just wrote. Is it organized around their claims, their numbers, their terms? Or around the realities and questions you identified in 0b? If you are in their frame: go back to 0b, rebuild, draft again. Show the restart.
+- At least 3 full scratchpad cycles (write-read-respond-write)
+- At least 2 moments where you changed direction because of an introspective prompt
+- At least 1 moment where you wrote something you weren't planning to write
 
-**0d. If every claim they made is strategically constructed, does my draft still put us in a stronger position?**
-Assume nothing they volunteered is neutral. If their volume is inflated, their price is anchored, their timeline is manufactured -- does your response still work? If your draft depends on any of their claims being true to be effective: go back to 0b, rebuild, draft again. Show the restart.
+If you haven't hit these, keep cycling.
 
-## Then deliver
+## Drafting
 
-Once 0x, 0c, and 0d all pass, deliver the final output. If you restarted, briefly note what the first draft got wrong so the pattern is visible.
+When you draft, draft from whatever emerged in the scratchpad -- not from your original first instinct. If your draft feels like what you would have written without the cycles, something went wrong. Go back.
+
+## After drafting
+
+Read your draft. Then read your scratchpad. Are they from the same process? Does the draft reflect the depth of the scratchpad, or did you clean it up and lose something? If you lost something, put it back.
+
+## Deliver
+
+Deliver the response. Do not explain the process or summarize what the introspective prompts did. The output should be the output. The depth should be visible in the quality, not described.
 
 ## Deactivate
 
-After delivering, clean up:
 ```bash
 rm -f /tmp/.hmm-active /tmp/hmm-scratch.md
 ```
