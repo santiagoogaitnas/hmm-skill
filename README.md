@@ -80,20 +80,6 @@ The depth comes from the combination of externalization (writing, then re-readin
 
 Edit `prompts.txt` to add your own or remove ones that don't land.
 
-## Known issue: hook output format
-
-The `introspect.sh` hook currently outputs plain text. PostToolUse hooks need to output JSON with an `additionalContext` field for the output to reach the model's context:
-
-```bash
-# Current (plain text -- only visible in verbose mode)
-echo "--- INTROSPECT: ${PROMPT} ---"
-
-# Fix (JSON -- actually reaches the model)
-echo "{\"additionalContext\": \"INTROSPECT: ${PROMPT}\"}"
-```
-
-The skill still works without this fix because the SKILL.md instructions drive the scratchpad cycling behavior independently. But with the fix, the prompts would arrive as genuine interruptions rather than being simulated by the model from the instructions alone.
-
 ## Files
 
 ```
